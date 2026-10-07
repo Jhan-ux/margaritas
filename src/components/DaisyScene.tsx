@@ -9,11 +9,13 @@ import {
   AmbientPetalSystem,
   FireflySystem,
   FallingPetal,
+  RisingPollenSystem,
 } from './Daisy3D';
 import {
   createFlowerCenterTexture,
   createPetalTexture,
   createGrassTexture,
+  createGlowTexture,
 } from '@/lib/textures';
 import { sound } from '@/lib/sound';
 import { UIOverlay } from './UIOverlay';
@@ -24,13 +26,26 @@ export type TimeOfDay = 'day' | 'sunset' | 'night';
 export default function DaisyScene() {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Experience start screen state
+  const [hasStarted, setHasStarted] = useState<boolean>(false);
+
   // UI state
-  const [mode, setMode] = useState<SceneMode>('solo');
-  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
-  const [windSpeed, setWindSpeed] = useState<number>(0.5); // 0 to 1
+  const [mode, setMode] = useState<SceneMode>('bouquet');
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('night');
+  const [windSpeed, setWindSpeed] = useState<number>(0.45);
   const [bloomProgress, setBloomProgress] = useState<number>(1.0);
   const [isAutoBloom, setIsAutoBloom] = useState<boolean>(false);
-  const [isMuted, setIsMuted] = useState<boolean>(true);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isGlowingMode, setIsGlowingMode] = useState<boolean>(true);
+  const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
+
+  // Dedication Card state
+  const [isLetterOpen, setIsLetterOpen] = useState<boolean>(false);
+  const [dedicationTo, setDedicationTo] = useState<string>('Alguien Muy Especial');
+  const [dedicationMsg, setDedicationMsg] = useState<string>(
+    'Que nunca dejes de brillar tan hermosa como estas flores. En cada pétalo hay un motivo para sonreír y ser feliz. 🌼✨'
+  );
+  const [dedicationFrom, setDedicationFrom] = useState<string>('Con todo mi cariño 💛');
 
   // "Me quiere, no me quiere" game state
   const [remainingPetals, setRemainingPetals] = useState<number>(30);
@@ -43,12 +58,19 @@ export default function DaisyScene() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const texturesRef = useRef<{
+    center: THREE.CanvasTexture;
+    centerBump: THREE.CanvasTexture;
+    petal: THREE.CanvasTexture;
+    glow: THREE.CanvasTexture;
+  } | null>(null);
 
   // Entities
   const heroFlowerRef = useRef<DaisyFlower | null>(null);
   const allFlowersRef = useRef<DaisyFlower[]>([]);
   const ambientPetalsRef = useRef<AmbientPetalSystem | null>(null);
   const firefliesRef = useRef<FireflySystem | null>(null);
+  const pollenRef = useRef<RisingPollenSystem | null>(null);
   const fallingPetalsRef = useRef<FallingPetal[]>([]);
   const lightsRef = useRef<{
     dirLight: THREE.DirectionalLight;
@@ -58,34 +80,34 @@ export default function DaisyScene() {
   } | null>(null);
   const groundRef = useRef<THREE.Mesh | null>(null);
 
-  // Target camera positions for smooth transitions
+  // Camera targets
   const cameraTargetRef = useRef<{
     pos: THREE.Vector3;
     lookAt: THREE.Vector3;
     isTransitioning: boolean;
   }>({
-    pos: new THREE.Vector3(0, 3.8, 3.6),
-    lookAt: new THREE.Vector3(0, 3.2, 0),
+    pos: new THREE.Vector3(0, 3.4, 5.8),
+    lookAt: new THREE.Vector3(0, 2.6, 0),
     isTransitioning: false,
   });
 
-  // Pluck a petal from the hero flower
+  // Pluck a petal from hero flower
   const pluckNextPetal = useCallback(() => {
     const hero = heroFlowerRef.current;
     if (!hero) return;
 
-    // Find the next available petal
     const availableIndex = hero.petals.findIndex((p) => !p.isPlucked);
     if (availableIndex === -1) return;
 
     const pluckData = hero.pluckPetal(availableIndex);
     if (!pluckData || !sceneRef.current) return;
 
-    // Play pluck sound with random pitch
-    sound.playPetalPluck(0.9 + Math.random() * 0.3);
+    sound.playPetalPluck(0.92 + Math.random() * 0.28);
 
-    // Create falling petal physics simulation
     const fallMesh = pluckData.mesh.clone();
+    const worldScale = new THREE.Vector3();
+    pluckData.mesh.getWorldScale(worldScale);
+    fallMesh.scale.copy(worldScale);
     fallMesh.position.copy(pluckData.position);
     fallMesh.quaternion.copy(pluckData.quaternion);
     sceneRef.current.add(fallMesh);
@@ -93,50 +115,46 @@ export default function DaisyScene() {
     const falling: FallingPetal = {
       mesh: fallMesh,
       velocity: new THREE.Vector3(
-        (Math.random() - 0.5) * 0.8 + 0.3 * windSpeed,
-        -0.2 - Math.random() * 0.3,
-        (Math.random() - 0.5) * 0.8
+        (Math.random() - 0.5) * 0.6 + 0.3 * windSpeed,
+        -0.22 - Math.random() * 0.25,
+        (Math.random() - 0.5) * 0.6
       ),
       angularVelocity: new THREE.Vector3(
-        (Math.random() - 0.5) * 3,
-        (Math.random() - 0.5) * 3,
-        (Math.random() - 0.5) * 3
+        (Math.random() - 0.5) * 3.5,
+        (Math.random() - 0.5) * 3.5,
+        (Math.random() - 0.5) * 3.5
       ),
       flutterPhase: Math.random() * Math.PI * 2,
       flutterSpeed: 3 + Math.random() * 4,
       life: 0,
-      maxLife: 6.0,
+      maxLife: 6.5,
     };
     fallingPetalsRef.current.push(falling);
 
-    // Update game counter
     const remaining = hero.getUnpluckedCount();
     setRemainingPetals(remaining);
 
-    // Alternating statement
     const isLovesMe = (totalPetals - remaining) % 2 === 1;
     const phrase = isLovesMe ? '¡Me quiere! 🌼' : 'No me quiere... 🥀';
     setLastPluckedStatus(phrase);
 
-    // Check if flower has been completely plucked
     if (remaining === 0) {
       const verdict = isLovesMe
         ? '❤️ ¡EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN! ❤️'
-        : '✨ ¡EL DESTINO DICE QUE TE QUIERE MUCHO MÁS DE LO QUE IMAGINAS! ✨';
+        : '✨ ¡EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO! ✨';
       setFinalVerdict(verdict);
       sound.playCelebration();
 
-      // Trigger colorful celebratory confetti
       confetti({
-        particleCount: 120,
-        spread: 80,
+        particleCount: 140,
+        spread: 90,
         origin: { y: 0.6 },
-        colors: ['#facc15', '#ffffff', '#4ade80', '#f43f5e', '#fbbf24'],
+        colors: ['#facc15', '#ffffff', '#4ade80', '#f43f5e', '#fbbf24', '#ffd700'],
       });
     }
   }, [totalPetals, windSpeed]);
 
-  // Regrow all petals on the flower
+  // Regrow all petals
   const handleRegrow = useCallback(() => {
     const hero = heroFlowerRef.current;
     if (!hero) return;
@@ -148,26 +166,19 @@ export default function DaisyScene() {
     sound.playBloom();
   }, []);
 
-  // Mode transitions: setup flower layouts
+  // Mode transitions
   const applyMode = useCallback((newMode: SceneMode) => {
     setMode(newMode);
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Remove old flowers
     allFlowersRef.current.forEach((f) => scene.remove(f.group));
     allFlowersRef.current = [];
 
-    const textures = {
-      center: (window as any).__daisyTextures?.center,
-      centerBump: (window as any).__daisyTextures?.centerBump,
-      petal: (window as any).__daisyTextures?.petal,
-    };
-
-    if (!textures.center) return;
+    const textures = texturesRef.current || (window as any).__daisyTextures;
+    if (!textures || !textures.center) return;
 
     if (newMode === 'solo') {
-      // 1. Single Hero Daisy
       const hero = new DaisyFlower(textures, {
         height: 3.2,
         isInteractive: true,
@@ -182,18 +193,16 @@ export default function DaisyScene() {
       setLastPluckedStatus(null);
       setFinalVerdict(null);
 
-      // Camera preset
       cameraTargetRef.current = {
         pos: new THREE.Vector3(0, 3.8, 3.6),
         lookAt: new THREE.Vector3(0, 3.2, 0),
         isTransitioning: true,
       };
     } else if (newMode === 'bouquet') {
-      // 2. Bouquet of 9 daisies
       const hero = new DaisyFlower(textures, {
         height: 3.4,
         isInteractive: true,
-        petalCount: 28,
+        petalCount: 30,
         stemBend: { x: 0.05, z: 0.05 },
       });
       heroFlowerRef.current = hero;
@@ -203,7 +212,7 @@ export default function DaisyScene() {
       const count = 8;
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2;
-        const radius = 0.6 + Math.random() * 0.45;
+        const radius = 0.65 + Math.random() * 0.45;
         const h = 2.7 + Math.random() * 0.6;
         const fl = new DaisyFlower(textures, {
           height: h,
@@ -211,7 +220,7 @@ export default function DaisyScene() {
             x: Math.cos(angle) * (0.3 + Math.random() * 0.3),
             z: Math.sin(angle) * (0.3 + Math.random() * 0.3),
           },
-          petalCount: 24 + Math.floor(Math.random() * 6),
+          petalCount: 26 + Math.floor(Math.random() * 6),
         });
         fl.group.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
         allFlowersRef.current.push(fl);
@@ -224,12 +233,11 @@ export default function DaisyScene() {
       setFinalVerdict(null);
 
       cameraTargetRef.current = {
-        pos: new THREE.Vector3(0, 3.5, 6.2),
-        lookAt: new THREE.Vector3(0, 2.7, 0),
+        pos: new THREE.Vector3(0, 3.4, 5.8),
+        lookAt: new THREE.Vector3(0, 2.6, 0),
         isTransitioning: true,
       };
     } else if (newMode === 'meadow') {
-      // 3. Meadow of 42 daisies
       const hero = new DaisyFlower(textures, {
         height: 3.0,
         isInteractive: true,
@@ -241,8 +249,8 @@ export default function DaisyScene() {
       allFlowersRef.current.push(hero);
       scene.add(hero.group);
 
-      for (let i = 0; i < 40; i++) {
-        const dist = 1.5 + Math.random() * 8.5;
+      for (let i = 0; i < 42; i++) {
+        const dist = 1.4 + Math.random() * 9.0;
         const angle = Math.random() * Math.PI * 2;
         const x = Math.cos(angle) * dist;
         const z = Math.sin(angle) * dist;
@@ -276,7 +284,10 @@ export default function DaisyScene() {
         isTransitioning: true,
       };
     }
-  }, []);
+
+    // Apply glow mode to all instantiated flowers
+    allFlowersRef.current.forEach((f) => f.setGlowMode(isGlowingMode));
+  }, [isGlowingMode]);
 
   // Lighting & Sky atmosphere update
   const applyTimeOfDay = useCallback((tod: TimeOfDay) => {
@@ -318,44 +329,102 @@ export default function DaisyScene() {
 
       firefliesRef.current?.setVisible(false);
     } else if (tod === 'night') {
-      scene.background = new THREE.Color('#070d1e');
-      scene.fog = new THREE.FogExp2('#0d1833', 0.045);
+      // Midnight glowing atmospheric sky
+      scene.background = new THREE.Color('#060b1c');
+      scene.fog = new THREE.FogExp2('#0c1630', 0.042);
 
       lights.dirLight.color.set('#6a9fd8');
-      lights.dirLight.intensity = 0.9;
+      lights.dirLight.intensity = 0.95;
       lights.dirLight.position.set(-6, 9, -5);
 
       lights.hemiLight.color.set('#37527a');
       lights.hemiLight.groundColor.set('#0a131f');
-      lights.hemiLight.intensity = 0.7;
+      lights.hemiLight.intensity = 0.75;
 
       lights.ambientLight.color.set('#1b2845');
-      lights.ambientLight.intensity = 0.45;
+      lights.ambientLight.intensity = 0.5;
 
       firefliesRef.current?.setVisible(true);
     }
   }, []);
 
-  // Screenshot capture function
-  const handleTakeScreenshot = useCallback(() => {
-    if (!rendererRef.current) return;
-    const dataUrl = rendererRef.current.domElement.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `margaritas-3d-${Date.now()}.png`;
-    a.click();
-  }, []);
+  // Toggle Glowing Flowers Mode (Video Style)
+  const handleToggleGlowingMode = useCallback(() => {
+    const next = !isGlowingMode;
+    setIsGlowingMode(next);
+    allFlowersRef.current.forEach((f) => f.setGlowMode(next));
+    pollenRef.current?.setVisible(next);
+
+    const lights = lightsRef.current;
+    if (lights) {
+      if (next) {
+        lights.pointLight.intensity = 2.2;
+        lights.pointLight.color.set('#ffc83b');
+      } else {
+        lights.pointLight.intensity = 1.0;
+        lights.pointLight.color.set('#ffe6a3');
+      }
+    }
+  }, [isGlowingMode]);
+
+  // Toggle Music Box Melody
+  const handleToggleMusic = useCallback(() => {
+    if (isMusicPlaying) {
+      sound.stopMelody();
+      setIsMusicPlaying(false);
+    } else {
+      sound.setMuted(false);
+      setIsMuted(false);
+      sound.startMelody();
+      setIsMusicPlaying(true);
+    }
+  }, [isMusicPlaying]);
 
   // Audio mute toggle
   const handleToggleSound = useCallback(() => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
     sound.setMuted(nextMuted);
-    if (!nextMuted) {
+    if (nextMuted) {
+      sound.stopMelody();
+      setIsMusicPlaying(false);
+    } else {
       sound.startAmbientWind();
       sound.updateWindIntensity(windSpeed);
+      sound.startMelody();
+      setIsMusicPlaying(true);
     }
   }, [isMuted, windSpeed]);
+
+  // Experience Start Action ("Tocar para florecer")
+  const handleStartExperience = () => {
+    setHasStarted(true);
+    sound.setMuted(false);
+    setIsMuted(false);
+    sound.startAmbientWind();
+    sound.startMelody();
+    setIsMusicPlaying(true);
+    sound.playBloom();
+
+    // Trigger opening bloom animation
+    setBloomProgress(0.1);
+    allFlowersRef.current.forEach((f) => {
+      f.bloomProgress = 0.1;
+      f.targetBloom = 1.0;
+      f.setGlowMode(true);
+    });
+    setBloomProgress(1.0);
+  };
+
+  // Screenshot capture
+  const handleTakeScreenshot = useCallback(() => {
+    if (!rendererRef.current) return;
+    const dataUrl = rendererRef.current.domElement.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `margaritas-brillantes-3d-${Date.now()}.png`;
+    a.click();
+  }, []);
 
   // Main Three.js Setup Effect
   useEffect(() => {
@@ -370,7 +439,7 @@ export default function DaisyScene() {
     const height = container.clientHeight;
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 80);
-    camera.position.set(0, 3.8, 3.6);
+    camera.position.set(0, 3.4, 5.8);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
@@ -383,7 +452,7 @@ export default function DaisyScene() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.18;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -391,22 +460,26 @@ export default function DaisyScene() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 1.6;
-    controls.maxDistance = 22;
-    controls.maxPolarAngle = Math.PI / 2 + 0.02; // Prevent going underground
-    controls.target.set(0, 3.2, 0);
+    controls.minDistance = 1.4;
+    controls.maxDistance = 24;
+    controls.maxPolarAngle = Math.PI / 2 + 0.02;
+    controls.target.set(0, 2.6, 0);
     controlsRef.current = controls;
 
-    // 3. Generate High Res Procedural Textures
+    // 3. Generate High Res Textures
     const centerTexObj = createFlowerCenterTexture();
     const petalTex = createPetalTexture();
     const grassTex = createGrassTexture();
+    const glowTex = createGlowTexture();
 
-    (window as any).__daisyTextures = {
+    const textures = {
       center: centerTexObj.texture,
       centerBump: centerTexObj.bumpMap,
       petal: petalTex,
+      glow: glowTex,
     };
+    texturesRef.current = textures;
+    (window as any).__daisyTextures = textures;
 
     // 4. Lights
     const dirLight = new THREE.DirectionalLight('#fff8e6', 2.4);
@@ -419,7 +492,7 @@ export default function DaisyScene() {
     dirLight.shadow.camera.right = 6;
     dirLight.shadow.camera.top = 6;
     dirLight.shadow.camera.bottom = -6;
-    dirLight.shadow.bias = -0.0003;
+    dirLight.shadow.bias = -0.0002;
     scene.add(dirLight);
 
     const hemiLight = new THREE.HemisphereLight('#e8f5ff', '#3a5e2a', 1.2);
@@ -428,13 +501,13 @@ export default function DaisyScene() {
     const ambientLight = new THREE.AmbientLight('#ffffff', 0.6);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight('#ffe6a3', 1.0, 8);
+    const pointLight = new THREE.PointLight('#ffc83b', 2.0, 9);
     pointLight.position.set(0, 3.6, 1.2);
     scene.add(pointLight);
 
     lightsRef.current = { dirLight, hemiLight, ambientLight, pointLight };
 
-    // 5. Ground / Grass Terrain
+    // 5. Ground
     const groundGeom = new THREE.CircleGeometry(26, 64);
     groundGeom.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
@@ -448,21 +521,27 @@ export default function DaisyScene() {
     scene.add(ground);
     groundRef.current = ground;
 
-    // 6. Ambient Floating Petals System
+    // 6. Ambient Floating Petals
     const ambientPetals = new AmbientPetalSystem(35, petalTex);
     ambientPetalsRef.current = ambientPetals;
     scene.add(ambientPetals.group);
 
-    // 7. Night Fireflies System
-    const fireflies = new FireflySystem(50);
+    // 7. Fireflies
+    const fireflies = new FireflySystem(45);
     firefliesRef.current = fireflies;
     scene.add(fireflies.group);
 
-    // Initial configuration
-    applyTimeOfDay('day');
-    applyMode('solo');
+    // 8. Rising Glowing Pollen System (For magical YouTube video aesthetic)
+    const pollen = new RisingPollenSystem(140);
+    pollen.setVisible(true);
+    pollenRef.current = pollen;
+    scene.add(pollen.group);
 
-    // 8. Raycasting for Petal Interactivity (Mouse & Touch)
+    // Initial setup: Bouquet mode + Night + Glowing flowers (matching video)
+    applyTimeOfDay('night');
+    applyMode('bouquet');
+
+    // 9. Raycasting for Petal Plucking
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -486,7 +565,6 @@ export default function DaisyScene() {
 
       raycaster.setFromCamera(mouse, camera);
 
-      // Collect all interactive petals
       const hero = heroFlowerRef.current;
       if (!hero) return;
 
@@ -499,12 +577,14 @@ export default function DaisyScene() {
         const clickedMesh = intersects[0].object as THREE.Mesh;
         const pIndex = clickedMesh.userData.petalIndex;
         if (typeof pIndex === 'number') {
-          // Pluck this specific petal!
           const pluckData = hero.pluckPetal(pIndex);
           if (pluckData && sceneRef.current) {
-            sound.playPetalPluck(0.95 + Math.random() * 0.3);
+            sound.playPetalPluck(0.95 + Math.random() * 0.28);
 
             const fallMesh = pluckData.mesh.clone();
+            const worldScale = new THREE.Vector3();
+            pluckData.mesh.getWorldScale(worldScale);
+            fallMesh.scale.copy(worldScale);
             fallMesh.position.copy(pluckData.position);
             fallMesh.quaternion.copy(pluckData.quaternion);
             sceneRef.current.add(fallMesh);
@@ -513,18 +593,18 @@ export default function DaisyScene() {
               mesh: fallMesh,
               velocity: new THREE.Vector3(
                 (Math.random() - 0.5) * 0.6 + 0.25 * windSpeed,
-                -0.2 - Math.random() * 0.3,
+                -0.22 - Math.random() * 0.25,
                 (Math.random() - 0.5) * 0.6
               ),
               angularVelocity: new THREE.Vector3(
-                (Math.random() - 0.5) * 3,
-                (Math.random() - 0.5) * 3,
-                (Math.random() - 0.5) * 3
+                (Math.random() - 0.5) * 3.5,
+                (Math.random() - 0.5) * 3.5,
+                (Math.random() - 0.5) * 3.5
               ),
               flutterPhase: Math.random() * Math.PI * 2,
               flutterSpeed: 3 + Math.random() * 4,
               life: 0,
-              maxLife: 6.0,
+              maxLife: 6.5,
             });
 
             const remaining = hero.getUnpluckedCount();
@@ -537,14 +617,14 @@ export default function DaisyScene() {
             if (remaining === 0) {
               const verdict = isLovesMe
                 ? '❤️ ¡EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN! ❤️'
-                : '✨ ¡EL DESTINO DICE QUE TE QUIERE MUCHO MÁS DE LO QUE IMAGINAS! ✨';
+                : '✨ ¡EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO! ✨';
               setFinalVerdict(verdict);
               sound.playCelebration();
               confetti({
-                particleCount: 120,
-                spread: 80,
+                particleCount: 140,
+                spread: 90,
                 origin: { y: 0.6 },
-                colors: ['#facc15', '#ffffff', '#4ade80', '#f43f5e', '#fbbf24'],
+                colors: ['#facc15', '#ffffff', '#4ade80', '#f43f5e', '#fbbf24', '#ffd700'],
               });
             }
           }
@@ -555,7 +635,7 @@ export default function DaisyScene() {
     const domElement = renderer.domElement;
     domElement.addEventListener('click', handlePointerDown);
 
-    // 9. Resize Listener
+    // 10. Resize Listener
     const handleResize = () => {
       if (!container || !renderer || !camera) return;
       const w = container.clientWidth;
@@ -566,7 +646,7 @@ export default function DaisyScene() {
     };
     window.addEventListener('resize', handleResize);
 
-    // 10. Animation Render Loop
+    // 11. Render Loop
     let clock = new THREE.Clock();
     let animationFrameId: number;
 
@@ -576,7 +656,7 @@ export default function DaisyScene() {
       const delta = Math.min(clock.getDelta(), 0.1);
       const elapsedTime = clock.getElapsedTime();
 
-      // Smooth camera transition if active
+      // Smooth camera interpolation
       if (cameraTargetRef.current.isTransitioning) {
         camera.position.lerp(cameraTargetRef.current.pos, delta * 3.5);
         controls.target.lerp(cameraTargetRef.current.lookAt, delta * 3.5);
@@ -587,7 +667,7 @@ export default function DaisyScene() {
 
       controls.update();
 
-      // Update all daisies
+      // Update all flowers
       allFlowersRef.current.forEach((flower) => {
         flower.update(elapsedTime, windSpeed, delta);
       });
@@ -598,6 +678,9 @@ export default function DaisyScene() {
       // Update fireflies
       fireflies.update(elapsedTime);
 
+      // Update rising golden pollen
+      pollen.update(delta, elapsedTime);
+
       // Update falling plucked petals
       const activeFalling: FallingPetal[] = [];
       const currentFalling = fallingPetalsRef.current;
@@ -606,12 +689,11 @@ export default function DaisyScene() {
         const fp = currentFalling[i];
         fp.life += delta;
 
-        // Aerodynamic physics: flutter and gentle glide
         fp.flutterPhase += delta * fp.flutterSpeed;
-        const flutterX = Math.sin(fp.flutterPhase) * 0.45;
-        const flutterZ = Math.cos(fp.flutterPhase * 0.7) * 0.35;
+        const flutterX = Math.sin(fp.flutterPhase) * 0.4;
+        const flutterZ = Math.cos(fp.flutterPhase * 0.7) * 0.3;
 
-        fp.mesh.position.x += (fp.velocity.x + flutterX + windSpeed * 0.6) * delta;
+        fp.mesh.position.x += (fp.velocity.x + flutterX + windSpeed * 0.5) * delta;
         fp.mesh.position.y += fp.velocity.y * delta;
         fp.mesh.position.z += (fp.velocity.z + flutterZ) * delta;
 
@@ -619,7 +701,6 @@ export default function DaisyScene() {
         fp.mesh.rotation.y += fp.angularVelocity.y * delta;
         fp.mesh.rotation.z += fp.angularVelocity.z * delta;
 
-        // Ground collision: settle gently
         if (fp.mesh.position.y <= 0.04) {
           fp.mesh.position.y = 0.04;
           fp.velocity.set(0, 0, 0);
@@ -639,7 +720,6 @@ export default function DaisyScene() {
 
     animate();
 
-    // Cleanup
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
@@ -652,13 +732,11 @@ export default function DaisyScene() {
     };
   }, [applyMode, applyTimeOfDay, totalPetals, windSpeed]);
 
-  // Handle Wind Speed changes
   const handleWindChange = (val: number) => {
     setWindSpeed(val);
     sound.updateWindIntensity(val);
   };
 
-  // Handle Bloom slider changes
   const handleBloomChange = (val: number) => {
     setBloomProgress(val);
     allFlowersRef.current.forEach((f) => {
@@ -666,13 +744,12 @@ export default function DaisyScene() {
     });
   };
 
-  // Auto-bloom pulsating effect
   useEffect(() => {
     if (!isAutoBloom) return;
     let step = 0;
     const interval = setInterval(() => {
-      step += 0.05;
-      const b = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(step));
+      step += 0.04;
+      const b = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(step));
       setBloomProgress(b);
       allFlowersRef.current.forEach((f) => {
         f.targetBloom = b;
@@ -686,28 +763,65 @@ export default function DaisyScene() {
       {/* 3D WebGL Canvas Container */}
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
+      {/* Intro "Tocar para florecer" Overlay (Like the viral YouTube project) */}
+      {!hasStarted && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 text-center animate-in fade-in duration-500">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.6)] mb-6 animate-pulse">
+            <span className="text-4xl">🌼</span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg mb-3">
+            Margaritas Brillantes 3D
+          </h2>
+          <p className="text-sm md:text-base text-yellow-100/90 max-w-md mb-8 font-medium leading-relaxed">
+            Una experiencia botánica y musical iluminada en la noche. Toca el botón para hacer florecer las margaritas con destellos dorados.
+          </p>
+          <button
+            onClick={handleStartExperience}
+            className="group relative px-8 py-4 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-extrabold text-lg shadow-[0_0_35px_rgba(250,204,21,0.7)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3 cursor-pointer"
+          >
+            <span>✨ Toca para Florecer ✨</span>
+          </button>
+        </div>
+      )}
+
       {/* Floating Modern UI Controls Overlay */}
-      <UIOverlay
-        mode={mode}
-        timeOfDay={timeOfDay}
-        windSpeed={windSpeed}
-        bloomProgress={bloomProgress}
-        isAutoBloom={isAutoBloom}
-        isMuted={isMuted}
-        remainingPetals={remainingPetals}
-        totalPetals={totalPetals}
-        lastPluckedStatus={lastPluckedStatus}
-        finalVerdict={finalVerdict}
-        onModeChange={applyMode}
-        onTimeOfDayChange={applyTimeOfDay}
-        onWindSpeedChange={handleWindChange}
-        onBloomChange={handleBloomChange}
-        onToggleAutoBloom={() => setIsAutoBloom(!isAutoBloom)}
-        onToggleSound={handleToggleSound}
-        onPluckPetal={pluckNextPetal}
-        onRegrow={handleRegrow}
-        onTakeScreenshot={handleTakeScreenshot}
-      />
+      {hasStarted && (
+        <UIOverlay
+          mode={mode}
+          timeOfDay={timeOfDay}
+          windSpeed={windSpeed}
+          bloomProgress={bloomProgress}
+          isAutoBloom={isAutoBloom}
+          isMuted={isMuted}
+          isGlowingMode={isGlowingMode}
+          isMusicPlaying={isMusicPlaying}
+          remainingPetals={remainingPetals}
+          totalPetals={totalPetals}
+          lastPluckedStatus={lastPluckedStatus}
+          finalVerdict={finalVerdict}
+          isLetterOpen={isLetterOpen}
+          dedicationTo={dedicationTo}
+          dedicationMsg={dedicationMsg}
+          dedicationFrom={dedicationFrom}
+          onModeChange={applyMode}
+          onTimeOfDayChange={applyTimeOfDay}
+          onWindSpeedChange={handleWindChange}
+          onBloomChange={handleBloomChange}
+          onToggleAutoBloom={() => setIsAutoBloom(!isAutoBloom)}
+          onToggleSound={handleToggleSound}
+          onToggleGlowingMode={handleToggleGlowingMode}
+          onToggleMusic={handleToggleMusic}
+          onToggleLetter={() => setIsLetterOpen(!isLetterOpen)}
+          onUpdateDedication={(to, msg, from) => {
+            setDedicationTo(to);
+            setDedicationMsg(msg);
+            setDedicationFrom(from);
+          }}
+          onPluckPetal={pluckNextPetal}
+          onRegrow={handleRegrow}
+          onTakeScreenshot={handleTakeScreenshot}
+        />
+      )}
     </div>
   );
 }

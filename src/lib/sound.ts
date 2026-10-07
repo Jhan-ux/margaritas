@@ -10,6 +10,11 @@ class SoundManager {
   private windFilter: BiquadFilterNode | null = null;
   private isWindPlaying: boolean = false;
 
+  // Music Box Melody loop
+  private isMelodyPlaying: boolean = false;
+  private melodyInterval: any = null;
+  private melodyStep: number = 0;
+
   private initContext() {
     if (!this.ctx && typeof window !== 'undefined') {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -25,7 +30,12 @@ class SoundManager {
   public setMuted(muted: boolean) {
     this.isMuted = muted;
     if (this.windGain && this.ctx) {
-      this.windGain.gain.setValueAtTime(muted ? 0 : 0.04, this.ctx.currentTime);
+      this.windGain.gain.setValueAtTime(muted ? 0 : 0.035, this.ctx.currentTime);
+    }
+    if (muted && this.isMelodyPlaying) {
+      this.stopMelody();
+    } else if (!muted && !this.isMelodyPlaying) {
+      this.startMelody();
     }
   }
 
@@ -45,20 +55,17 @@ class SoundManager {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    // Pentatonic scale notes for pleasant harmony
     const baseFreqs = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
     const freq = baseFreqs[Math.floor(Math.random() * baseFreqs.length)] * pitchFactor;
 
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, t);
-    // Subtle vibrato
     osc.frequency.exponentialRampToValueAtTime(freq * 0.99, t + 0.6);
 
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
 
-    // Harmonic sparkle
     const sparkle = this.ctx.createOscillator();
     const sparkleGain = this.ctx.createGain();
     sparkle.type = 'triangle';
@@ -109,7 +116,7 @@ class SoundManager {
   }
 
   /**
-   * Celebratory triumphal chime when daisy prediction is complete
+   * Celebratory chime
    */
   public playCelebration() {
     if (this.isMuted) return;
@@ -136,6 +143,75 @@ class SoundManager {
   }
 
   /**
+   * Romantic Music Box Melodic Player
+   * Soft, peaceful arpeggios that accompany the blooming and glowing flowers.
+   */
+  public startMelody() {
+    if (this.isMelodyPlaying || this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    this.isMelodyPlaying = true;
+    this.melodyStep = 0;
+
+    // Peaceful lullaby/music box notes (C major scale harmony)
+    const melodyPattern = [
+      // Measure 1: C major
+      523.25, 659.25, 783.99, 1046.5,
+      // Measure 2: G major
+      392.00, 587.33, 783.99, 987.77,
+      // Measure 3: A minor
+      440.00, 523.25, 659.25, 880.00,
+      // Measure 4: F major
+      349.23, 523.25, 659.25, 880.00,
+      // Measure 5: High sparkle
+      523.25, 783.99, 1046.5, 1318.51,
+      // Measure 6: Gentle resolve
+      880.00, 783.99, 659.25, 523.25,
+    ];
+
+    const playNote = () => {
+      if (!this.isMelodyPlaying || !this.ctx || this.isMuted) return;
+
+      const freq = melodyPattern[this.melodyStep % melodyPattern.length];
+      this.melodyStep++;
+
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      // Warm music box envelope
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.045, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 1.45);
+    };
+
+    // Play every 420ms
+    playNote();
+    this.melodyInterval = setInterval(playNote, 420);
+  }
+
+  public stopMelody() {
+    this.isMelodyPlaying = false;
+    if (this.melodyInterval) {
+      clearInterval(this.melodyInterval);
+      this.melodyInterval = null;
+    }
+  }
+
+  public getIsMelodyPlaying(): boolean {
+    return this.isMelodyPlaying;
+  }
+
+  /**
    * Ambient gentle wind rustling synthesizer
    */
   public startAmbientWind() {
@@ -148,7 +224,6 @@ class SoundManager {
       const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
 
-      // Pinkish/Brown noise approximation for realistic wind
       let lastOut = 0.0;
       for (let i = 0; i < bufferSize; i++) {
         const white = Math.random() * 2 - 1;
