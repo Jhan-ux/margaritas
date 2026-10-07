@@ -40,14 +40,6 @@ export default function DaisyScene() {
   const [isGlowingMode, setIsGlowingMode] = useState<boolean>(true);
   const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
 
-  // Dedication Card state (personalized for Pastelito)
-  const [isLetterOpen, setIsLetterOpen] = useState<boolean>(false);
-  const [dedicationTo, setDedicationTo] = useState<string>('Pastelito');
-  const [dedicationMsg, setDedicationMsg] = useState<string>(
-    'Pastelito, cada flor que florece en esta noche representa lo especial que eres para mí. Gracias por endulzar mi vida y por iluminar cada momento con tu dulzura y tu sonrisa.'
-  );
-  const [dedicationFrom, setDedicationFrom] = useState<string>('Con todo mi amor');
-
   // "Me quiere, no me quiere" game state
   const [remainingPetals, setRemainingPetals] = useState<number>(30);
   const [totalPetals, setTotalPetals] = useState<number>(30);
@@ -368,29 +360,17 @@ export default function DaisyScene() {
   }, [isGlowingMode]);
 
   const handleToggleMusic = useCallback(() => {
-    if (isMusicPlaying) {
-      sound.stopMelody();
-      setIsMusicPlaying(false);
-    } else {
-      sound.setMuted(false);
-      setIsMuted(false);
-      sound.startMelody();
-      setIsMusicPlaying(true);
-    }
-  }, [isMusicPlaying]);
+    const isPlaying = sound.toggleWonderwall();
+    setIsMusicPlaying(isPlaying);
+  }, []);
 
   const handleToggleSound = useCallback(() => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
     sound.setMuted(nextMuted);
-    if (nextMuted) {
-      sound.stopMelody();
-      setIsMusicPlaying(false);
-    } else {
+    if (!nextMuted) {
       sound.startAmbientWind();
       sound.updateWindIntensity(windSpeed);
-      sound.startMelody();
-      setIsMusicPlaying(true);
     }
   }, [isMuted, windSpeed]);
 
@@ -399,7 +379,7 @@ export default function DaisyScene() {
     sound.setMuted(false);
     setIsMuted(false);
     sound.startAmbientWind();
-    sound.startMelody();
+    sound.playWonderwall();
     setIsMusicPlaying(true);
     sound.playBloom();
 
@@ -779,10 +759,6 @@ export default function DaisyScene() {
           totalPetals={totalPetals}
           lastPluckedStatus={lastPluckedStatus}
           finalVerdict={finalVerdict}
-          isLetterOpen={isLetterOpen}
-          dedicationTo={dedicationTo}
-          dedicationMsg={dedicationMsg}
-          dedicationFrom={dedicationFrom}
           onModeChange={applyMode}
           onTimeOfDayChange={applyTimeOfDay}
           onWindSpeedChange={handleWindChange}
@@ -791,12 +767,6 @@ export default function DaisyScene() {
           onToggleSound={handleToggleSound}
           onToggleGlowingMode={handleToggleGlowingMode}
           onToggleMusic={handleToggleMusic}
-          onToggleLetter={() => setIsLetterOpen(!isLetterOpen)}
-          onUpdateDedication={(to, msg, from) => {
-            setDedicationTo(to);
-            setDedicationMsg(msg);
-            setDedicationFrom(from);
-          }}
           onPluckPetal={pluckNextPetal}
           onRegrow={handleRegrow}
           onTakeScreenshot={handleTakeScreenshot}

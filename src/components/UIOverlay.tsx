@@ -18,10 +18,6 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
-  Mail,
-  Check,
-  Copy,
-  Pencil,
   Sliders,
   X,
 } from 'lucide-react';
@@ -40,10 +36,6 @@ interface UIOverlayProps {
   totalPetals: number;
   lastPluckedStatus: string | null;
   finalVerdict: string | null;
-  isLetterOpen: boolean;
-  dedicationTo: string;
-  dedicationMsg: string;
-  dedicationFrom: string;
   onModeChange: (m: SceneMode) => void;
   onTimeOfDayChange: (t: TimeOfDay) => void;
   onWindSpeedChange: (val: number) => void;
@@ -52,8 +44,6 @@ interface UIOverlayProps {
   onToggleSound: () => void;
   onToggleGlowingMode: () => void;
   onToggleMusic: () => void;
-  onToggleLetter: () => void;
-  onUpdateDedication: (to: string, msg: string, from: string) => void;
   onPluckPetal: () => void;
   onRegrow: () => void;
   onTakeScreenshot: () => void;
@@ -72,10 +62,6 @@ export function UIOverlay({
   totalPetals,
   lastPluckedStatus,
   finalVerdict,
-  isLetterOpen,
-  dedicationTo,
-  dedicationMsg,
-  dedicationFrom,
   onModeChange,
   onTimeOfDayChange,
   onWindSpeedChange,
@@ -84,34 +70,14 @@ export function UIOverlay({
   onToggleSound,
   onToggleGlowingMode,
   onToggleMusic,
-  onToggleLetter,
-  onUpdateDedication,
   onPluckPetal,
   onRegrow,
   onTakeScreenshot,
 }: UIOverlayProps) {
   // Mobile active tab for bottom panel: 'scene' | 'light' | 'wind'
   const [activeTab, setActiveTab] = useState<'scene' | 'light' | 'wind'>('scene');
-  const [isControlsOpen, setIsControlsOpen] = useState(false); // Collapsed by default on mobile for full view
+  const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [isEditingLetter, setIsEditingLetter] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const [tempTo, setTempTo] = useState(dedicationTo);
-  const [tempMsg, setTempMsg] = useState(dedicationMsg);
-  const [tempFrom, setTempFrom] = useState(dedicationFrom);
-
-  const handleCopyLetter = () => {
-    const text = `${dedicationTo}\n\n${dedicationMsg}\n\n— ${dedicationFrom}`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSaveLetter = () => {
-    onUpdateDedication(tempTo, tempMsg, tempFrom);
-    setIsEditingLetter(false);
-  };
 
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 sm:p-5 overflow-hidden select-none">
@@ -135,14 +101,18 @@ export function UIOverlay({
 
         {/* Action Buttons Bar */}
         <div className="flex items-center gap-1 sm:gap-1.5">
-          {/* Dedication Letter */}
+          {/* Oasis - Wonderwall Music Button */}
           <button
-            onClick={onToggleLetter}
-            aria-label="Tu Carta"
-            className="h-9 px-2.5 sm:px-3 rounded-xl backdrop-blur-xl bg-gradient-to-r from-rose-600/80 to-amber-600/80 border border-white/30 text-white hover:brightness-110 active:scale-95 transition shadow-lg flex items-center gap-1.5 text-xs font-bold"
+            onClick={onToggleMusic}
+            aria-label="Reproducir Wonderwall de Oasis"
+            className={`h-9 px-3 rounded-xl backdrop-blur-xl border transition-all duration-300 shadow-lg flex items-center gap-1.5 text-xs font-bold ${
+              isMusicPlaying
+                ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200 shadow-[0_0_15px_rgba(52,211,153,0.45)]'
+                : 'bg-black/50 border-white/20 text-white/80 hover:bg-black/70'
+            }`}
           >
-            <Mail className="w-4 h-4" />
-            <span className="hidden md:inline">Tu Carta</span>
+            <Music className={`w-4 h-4 ${isMusicPlaying ? 'text-emerald-300 animate-pulse' : 'text-white/70'}`} />
+            <span>Wonderwall</span>
           </button>
 
           {/* Glow Mode */}
@@ -159,24 +129,10 @@ export function UIOverlay({
             <span className="hidden md:inline">Resplandor</span>
           </button>
 
-          {/* Music */}
-          <button
-            onClick={onToggleMusic}
-            aria-label="Música"
-            className={`h-9 px-2.5 sm:px-3 rounded-xl backdrop-blur-xl border transition shadow-lg flex items-center gap-1.5 text-xs font-bold ${
-              isMusicPlaying
-                ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200 shadow-[0_0_12px_rgba(52,211,153,0.4)]'
-                : 'bg-black/50 border-white/20 text-white/80'
-            }`}
-          >
-            <Music className="w-4 h-4 text-emerald-300" />
-            <span className="hidden md:inline">Música</span>
-          </button>
-
           {/* Sound Mute */}
           <button
             onClick={onToggleSound}
-            aria-label="Sonido"
+            aria-label="Sonido ambiental"
             className="w-9 h-9 rounded-xl backdrop-blur-xl bg-black/50 border border-white/20 text-white hover:bg-black/70 active:scale-95 transition shadow-lg flex items-center justify-center text-xs"
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-300" /> : <Volume2 className="w-4 h-4 text-emerald-300" />}
@@ -202,101 +158,6 @@ export function UIOverlay({
         </div>
       </header>
 
-      {/* Dedication Letter Modal */}
-      {isLetterOpen && (
-        <div className="pointer-events-auto self-center w-[92vw] sm:max-w-lg max-h-[80vh] overflow-y-auto backdrop-blur-2xl bg-black/90 border border-yellow-400/40 text-white p-4 sm:p-6 rounded-3xl shadow-[0_0_40px_rgba(250,204,21,0.25)] z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-yellow-400/20">
-            <div className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-yellow-400" />
-              <h3 className="font-extrabold text-base text-yellow-300 tracking-tight">
-                Carta para Pastelito
-              </h3>
-            </div>
-            <button
-              onClick={onToggleLetter}
-              className="text-white/60 hover:text-white p-1 rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {!isEditingLetter ? (
-            <div className="space-y-3.5">
-              <div className="p-4 rounded-2xl bg-white/5 border border-yellow-400/20">
-                <p className="text-xs font-bold uppercase tracking-wider text-yellow-400 mb-2">Para: {dedicationTo}</p>
-                <p className="text-sm text-yellow-50/95 leading-relaxed font-serif italic whitespace-pre-line">
-                  &ldquo;{dedicationMsg}&rdquo;
-                </p>
-                <p className="text-xs font-semibold text-right text-yellow-400/90 mt-3">— {dedicationFrom}</p>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  onClick={() => setIsEditingLetter(true)}
-                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition text-yellow-200 flex items-center gap-1.5"
-                >
-                  <Pencil className="w-3.5 h-3.5" /> Editar
-                </button>
-                <button
-                  onClick={handleCopyLetter}
-                  className="px-4 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 text-xs font-extrabold shadow-md flex items-center gap-1.5 transition active:scale-95"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copiado' : 'Copiar'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-yellow-300">Destinatario:</label>
-                <input
-                  type="text"
-                  value={tempTo}
-                  onChange={(e) => setTempTo(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 bg-white/10 border border-yellow-400/30 rounded-xl text-sm text-white focus:outline-none focus:border-yellow-400"
-                  placeholder="Nombre de la persona..."
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-yellow-300">Mensaje:</label>
-                <textarea
-                  rows={3}
-                  value={tempMsg}
-                  onChange={(e) => setTempMsg(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 bg-white/10 border border-yellow-400/30 rounded-xl text-sm text-white focus:outline-none focus:border-yellow-400 resize-none font-serif"
-                  placeholder="Escribe tu dedicatoria..."
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-yellow-300">Remitente:</label>
-                <input
-                  type="text"
-                  value={tempFrom}
-                  onChange={(e) => setTempFrom(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 bg-white/10 border border-yellow-400/30 rounded-xl text-sm text-white focus:outline-none focus:border-yellow-400"
-                  placeholder="Tu nombre..."
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  onClick={() => setIsEditingLetter(false)}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 text-xs font-medium text-white/80"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveLetter}
-                  className="px-4 py-1.5 rounded-xl bg-yellow-400 text-yellow-950 text-xs font-bold"
-                >
-                  Guardar
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Info Popover */}
       {showInfo && (
         <div className="pointer-events-auto self-center w-[92vw] sm:max-w-md backdrop-blur-2xl bg-black/90 border border-white/20 text-white p-4 sm:p-5 rounded-3xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200">
@@ -321,12 +182,12 @@ export function UIOverlay({
               <span><strong>Cámara 360:</strong> Desliza un dedo para rotar y pellizca para zoom.</span>
             </li>
             <li className="flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-              <span><strong>Resplandor:</strong> Activa el botón de resplandor para ver las flores iluminadas en la noche.</span>
+              <Music className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+              <span><strong>Canción:</strong> Wonderwall de Oasis se reproduce de fondo.</span>
             </li>
             <li className="flex items-start gap-2">
-              <Music className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-              <span><strong>Música:</strong> Activa la melodía relajante de fondo.</span>
+              <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+              <span><strong>Resplandor:</strong> Activa el botón de resplandor para ver las flores iluminadas.</span>
             </li>
           </ul>
         </div>
@@ -381,12 +242,10 @@ export function UIOverlay({
         </div>
       </div>
 
-      {/* Bottom Main Controls Panel (Mobile-optimized with tabs & collapsible bar) */}
+      {/* Bottom Main Controls Panel */}
       <footer className="pointer-events-auto self-center max-w-2xl w-full">
         <div className="backdrop-blur-2xl bg-black/70 border border-white/20 rounded-3xl p-2.5 sm:p-4 shadow-2xl text-white transition-all duration-300">
-          {/* Header toggler & tabs */}
           <div className="flex items-center justify-between pb-2 border-b border-white/15 gap-2">
-            {/* Quick Segmented Tabs on Mobile */}
             <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
               <button
                 onClick={() => {
@@ -434,7 +293,6 @@ export function UIOverlay({
               </button>
             </div>
 
-            {/* Panel Expand / Collapse Toggler */}
             <button
               onClick={() => setIsControlsOpen(!isControlsOpen)}
               className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition text-white/80"
@@ -444,10 +302,8 @@ export function UIOverlay({
             </button>
           </div>
 
-          {/* Active Tab Panel Content */}
           {isControlsOpen && (
             <div className="pt-2.5">
-              {/* Tab 1: Escena */}
               {activeTab === 'scene' && (
                 <div className="flex flex-col gap-1.5 animate-in fade-in duration-150">
                   <div className="grid grid-cols-3 gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10">
@@ -485,7 +341,6 @@ export function UIOverlay({
                 </div>
               )}
 
-              {/* Tab 2: Luz / Atmósfera */}
               {activeTab === 'light' && (
                 <div className="flex flex-col gap-1.5 animate-in fade-in duration-150">
                   <div className="grid grid-cols-3 gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10">
@@ -523,10 +378,8 @@ export function UIOverlay({
                 </div>
               )}
 
-              {/* Tab 3: Viento & Floración */}
               {activeTab === 'wind' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-150">
-                  {/* Wind Slider */}
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs font-semibold text-white/80">
                       <span className="flex items-center gap-1">
@@ -547,7 +400,6 @@ export function UIOverlay({
                     />
                   </div>
 
-                  {/* Bloom Slider */}
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs font-semibold text-white/80">
                       <span className="flex items-center gap-1">

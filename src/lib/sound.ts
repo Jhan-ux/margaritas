@@ -1,6 +1,7 @@
 /**
- * Interactive Web Audio Synthesizer for Daisy 3D Experience.
- * Runs 100% in the browser with zero external audio assets, works seamlessly on Vercel.
+ * Audio Manager for Pastelito Experience.
+ * Plays "Wonderwall" by Oasis directly from public/wonderwall.mp3
+ * along with interactive petal pluck chimes.
  */
 
 class SoundManager {
@@ -10,10 +11,9 @@ class SoundManager {
   private windFilter: BiquadFilterNode | null = null;
   private isWindPlaying: boolean = false;
 
-  // Music Box Melody loop
-  private isMelodyPlaying: boolean = false;
-  private melodyInterval: any = null;
-  private melodyStep: number = 0;
+  // Real Oasis - Wonderwall Audio Element
+  private wonderwallAudio: HTMLAudioElement | null = null;
+  private isWonderwallPlaying: boolean = false;
 
   private initContext() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -27,15 +27,55 @@ class SoundManager {
     }
   }
 
+  public playWonderwall() {
+    if (typeof window === 'undefined') return;
+    this.initContext();
+
+    if (!this.wonderwallAudio) {
+      this.wonderwallAudio = new Audio('/wonderwall.mp3');
+      this.wonderwallAudio.loop = true;
+      this.wonderwallAudio.preload = 'auto';
+      this.wonderwallAudio.volume = 0.75;
+    }
+
+    this.wonderwallAudio.muted = this.isMuted;
+    this.wonderwallAudio.play()
+      .then(() => {
+        this.isWonderwallPlaying = true;
+      })
+      .catch((e) => {
+        console.warn('Playback waiting for user gesture:', e);
+      });
+  }
+
+  public pauseWonderwall() {
+    if (this.wonderwallAudio) {
+      this.wonderwallAudio.pause();
+      this.isWonderwallPlaying = false;
+    }
+  }
+
+  public toggleWonderwall(): boolean {
+    if (this.isWonderwallPlaying) {
+      this.pauseWonderwall();
+      return false;
+    } else {
+      this.playWonderwall();
+      return true;
+    }
+  }
+
+  public getIsWonderwallPlaying(): boolean {
+    return this.isWonderwallPlaying;
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
-    if (this.windGain && this.ctx) {
-      this.windGain.gain.setValueAtTime(muted ? 0 : 0.035, this.ctx.currentTime);
+    if (this.wonderwallAudio) {
+      this.wonderwallAudio.muted = muted;
     }
-    if (muted && this.isMelodyPlaying) {
-      this.stopMelody();
-    } else if (!muted && !this.isMelodyPlaying) {
-      this.startMelody();
+    if (this.windGain && this.ctx) {
+      this.windGain.gain.setValueAtTime(muted ? 0 : 0.025, this.ctx.currentTime);
     }
   }
 
@@ -44,7 +84,7 @@ class SoundManager {
   }
 
   /**
-   * Delicate acoustic chime / harp note when plucking a petal
+   * Delicate acoustic chime when plucking a petal
    */
   public playPetalPluck(pitchFactor = 1.0) {
     if (this.isMuted) return;
@@ -116,7 +156,7 @@ class SoundManager {
   }
 
   /**
-   * Celebratory chime
+   * Celebration chime when flower is plucked
    */
   public playCelebration() {
     if (this.isMuted) return;
@@ -140,75 +180,6 @@ class SoundManager {
       osc.start(t + i * 0.1);
       osc.stop(t + i * 0.1 + 1.6);
     });
-  }
-
-  /**
-   * Romantic Music Box Melodic Player
-   * Soft, peaceful arpeggios that accompany the blooming and glowing flowers.
-   */
-  public startMelody() {
-    if (this.isMelodyPlaying || this.isMuted) return;
-    this.initContext();
-    if (!this.ctx) return;
-
-    this.isMelodyPlaying = true;
-    this.melodyStep = 0;
-
-    // Peaceful lullaby/music box notes (C major scale harmony)
-    const melodyPattern = [
-      // Measure 1: C major
-      523.25, 659.25, 783.99, 1046.5,
-      // Measure 2: G major
-      392.00, 587.33, 783.99, 987.77,
-      // Measure 3: A minor
-      440.00, 523.25, 659.25, 880.00,
-      // Measure 4: F major
-      349.23, 523.25, 659.25, 880.00,
-      // Measure 5: High sparkle
-      523.25, 783.99, 1046.5, 1318.51,
-      // Measure 6: Gentle resolve
-      880.00, 783.99, 659.25, 523.25,
-    ];
-
-    const playNote = () => {
-      if (!this.isMelodyPlaying || !this.ctx || this.isMuted) return;
-
-      const freq = melodyPattern[this.melodyStep % melodyPattern.length];
-      this.melodyStep++;
-
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-
-      // Warm music box envelope
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(0.045, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 1.45);
-    };
-
-    // Play every 420ms
-    playNote();
-    this.melodyInterval = setInterval(playNote, 420);
-  }
-
-  public stopMelody() {
-    this.isMelodyPlaying = false;
-    if (this.melodyInterval) {
-      clearInterval(this.melodyInterval);
-      this.melodyInterval = null;
-    }
-  }
-
-  public getIsMelodyPlaying(): boolean {
-    return this.isMelodyPlaying;
   }
 
   /**
@@ -243,7 +214,7 @@ class SoundManager {
       this.windFilter = filter;
 
       const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(this.isMuted ? 0 : 0.035, this.ctx.currentTime);
+      gain.gain.setValueAtTime(this.isMuted ? 0 : 0.025, this.ctx.currentTime);
       this.windGain = gain;
 
       whiteNoise.connect(filter);
@@ -253,14 +224,14 @@ class SoundManager {
       whiteNoise.start();
       this.isWindPlaying = true;
     } catch {
-      // Audio autoplay policy fallback
+      // Audio policy
     }
   }
 
   public updateWindIntensity(speedFactor: number) {
     if (!this.windFilter || !this.ctx || !this.windGain) return;
     const targetFreq = 250 + speedFactor * 350;
-    const targetGain = this.isMuted ? 0 : 0.02 + speedFactor * 0.035;
+    const targetGain = this.isMuted ? 0 : 0.015 + speedFactor * 0.025;
     this.windFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.5);
     this.windGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.5);
   }
