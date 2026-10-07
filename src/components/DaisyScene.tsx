@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import confetti from 'canvas-confetti';
+import { Flower2, Sparkles } from 'lucide-react';
 import {
   DaisyFlower,
   AmbientPetalSystem,
@@ -39,13 +40,13 @@ export default function DaisyScene() {
   const [isGlowingMode, setIsGlowingMode] = useState<boolean>(true);
   const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
 
-  // Dedication Card state
+  // Dedication Card state (clean text with no emojis)
   const [isLetterOpen, setIsLetterOpen] = useState<boolean>(false);
   const [dedicationTo, setDedicationTo] = useState<string>('Alguien Muy Especial');
   const [dedicationMsg, setDedicationMsg] = useState<string>(
-    'Que nunca dejes de brillar tan hermosa como estas flores. En cada pétalo hay un motivo para sonreír y ser feliz. 🌼✨'
+    'Que nunca dejes de brillar con tanta luz y alegría. En cada pétalo hay un motivo para sonreír y ser feliz.'
   );
-  const [dedicationFrom, setDedicationFrom] = useState<string>('Con todo mi cariño 💛');
+  const [dedicationFrom, setDedicationFrom] = useState<string>('Con todo mi cariño');
 
   // "Me quiere, no me quiere" game state
   const [remainingPetals, setRemainingPetals] = useState<number>(30);
@@ -135,13 +136,13 @@ export default function DaisyScene() {
     setRemainingPetals(remaining);
 
     const isLovesMe = (totalPetals - remaining) % 2 === 1;
-    const phrase = isLovesMe ? '¡Me quiere! 🌼' : 'No me quiere... 🥀';
+    const phrase = isLovesMe ? '¡Me quiere!' : 'No me quiere';
     setLastPluckedStatus(phrase);
 
     if (remaining === 0) {
       const verdict = isLovesMe
-        ? '❤️ ¡EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN! ❤️'
-        : '✨ ¡EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO! ✨';
+        ? 'EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN'
+        : 'EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO';
       setFinalVerdict(verdict);
       sound.playCelebration();
 
@@ -166,7 +167,7 @@ export default function DaisyScene() {
     sound.playBloom();
   }, []);
 
-  // Mode transitions
+  // Mode transitions with Mobile camera distance framing
   const applyMode = useCallback((newMode: SceneMode) => {
     setMode(newMode);
     const scene = sceneRef.current;
@@ -177,6 +178,8 @@ export default function DaisyScene() {
 
     const textures = texturesRef.current || (window as any).__daisyTextures;
     if (!textures || !textures.center) return;
+
+    const isPortrait = typeof window !== 'undefined' && window.innerWidth < window.innerHeight;
 
     if (newMode === 'solo') {
       const hero = new DaisyFlower(textures, {
@@ -194,8 +197,8 @@ export default function DaisyScene() {
       setFinalVerdict(null);
 
       cameraTargetRef.current = {
-        pos: new THREE.Vector3(0, 3.8, 3.6),
-        lookAt: new THREE.Vector3(0, 3.2, 0),
+        pos: new THREE.Vector3(0, 3.4, isPortrait ? 4.8 : 3.6),
+        lookAt: new THREE.Vector3(0, 3.0, 0),
         isTransitioning: true,
       };
     } else if (newMode === 'bouquet') {
@@ -233,8 +236,8 @@ export default function DaisyScene() {
       setFinalVerdict(null);
 
       cameraTargetRef.current = {
-        pos: new THREE.Vector3(0, 3.4, 5.8),
-        lookAt: new THREE.Vector3(0, 2.6, 0),
+        pos: new THREE.Vector3(0, 3.2, isPortrait ? 7.6 : 5.8),
+        lookAt: new THREE.Vector3(0, 2.5, 0),
         isTransitioning: true,
       };
     } else if (newMode === 'meadow') {
@@ -279,13 +282,12 @@ export default function DaisyScene() {
       setFinalVerdict(null);
 
       cameraTargetRef.current = {
-        pos: new THREE.Vector3(0, 4.6, 9.2),
-        lookAt: new THREE.Vector3(0, 2.0, 0),
+        pos: new THREE.Vector3(0, 4.4, isPortrait ? 12.0 : 9.2),
+        lookAt: new THREE.Vector3(0, 1.8, 0),
         isTransitioning: true,
       };
     }
 
-    // Apply glow mode to all instantiated flowers
     allFlowersRef.current.forEach((f) => f.setGlowMode(isGlowingMode));
   }, [isGlowingMode]);
 
@@ -329,7 +331,6 @@ export default function DaisyScene() {
 
       firefliesRef.current?.setVisible(false);
     } else if (tod === 'night') {
-      // Midnight glowing atmospheric sky
       scene.background = new THREE.Color('#060b1c');
       scene.fog = new THREE.FogExp2('#0c1630', 0.042);
 
@@ -348,7 +349,6 @@ export default function DaisyScene() {
     }
   }, []);
 
-  // Toggle Glowing Flowers Mode (Video Style)
   const handleToggleGlowingMode = useCallback(() => {
     const next = !isGlowingMode;
     setIsGlowingMode(next);
@@ -367,7 +367,6 @@ export default function DaisyScene() {
     }
   }, [isGlowingMode]);
 
-  // Toggle Music Box Melody
   const handleToggleMusic = useCallback(() => {
     if (isMusicPlaying) {
       sound.stopMelody();
@@ -380,7 +379,6 @@ export default function DaisyScene() {
     }
   }, [isMusicPlaying]);
 
-  // Audio mute toggle
   const handleToggleSound = useCallback(() => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
@@ -396,7 +394,6 @@ export default function DaisyScene() {
     }
   }, [isMuted, windSpeed]);
 
-  // Experience Start Action ("Tocar para florecer")
   const handleStartExperience = () => {
     setHasStarted(true);
     sound.setMuted(false);
@@ -406,7 +403,6 @@ export default function DaisyScene() {
     setIsMusicPlaying(true);
     sound.playBloom();
 
-    // Trigger opening bloom animation
     setBloomProgress(0.1);
     allFlowersRef.current.forEach((f) => {
       f.bloomProgress = 0.1;
@@ -416,30 +412,28 @@ export default function DaisyScene() {
     setBloomProgress(1.0);
   };
 
-  // Screenshot capture
   const handleTakeScreenshot = useCallback(() => {
     if (!rendererRef.current) return;
     const dataUrl = rendererRef.current.domElement.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `margaritas-brillantes-3d-${Date.now()}.png`;
+    a.download = `margaritas-3d-${Date.now()}.png`;
     a.click();
   }, []);
 
-  // Main Three.js Setup Effect
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // 1. Scene, Camera, Renderer
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
     const width = container.clientWidth;
     const height = container.clientHeight;
+    const isPortrait = width < height;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 80);
-    camera.position.set(0, 3.4, 5.8);
+    const camera = new THREE.PerspectiveCamera(isPortrait ? 58 : 45, width / height, 0.1, 80);
+    camera.position.set(0, 3.4, isPortrait ? 7.6 : 5.8);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
@@ -456,17 +450,15 @@ export default function DaisyScene() {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 2. Orbit Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 1.4;
     controls.maxDistance = 24;
     controls.maxPolarAngle = Math.PI / 2 + 0.02;
-    controls.target.set(0, 2.6, 0);
+    controls.target.set(0, 2.5, 0);
     controlsRef.current = controls;
 
-    // 3. Generate High Res Textures
     const centerTexObj = createFlowerCenterTexture();
     const petalTex = createPetalTexture();
     const grassTex = createGrassTexture();
@@ -481,7 +473,6 @@ export default function DaisyScene() {
     texturesRef.current = textures;
     (window as any).__daisyTextures = textures;
 
-    // 4. Lights
     const dirLight = new THREE.DirectionalLight('#fff8e6', 2.4);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
@@ -507,7 +498,6 @@ export default function DaisyScene() {
 
     lightsRef.current = { dirLight, hemiLight, ambientLight, pointLight };
 
-    // 5. Ground
     const groundGeom = new THREE.CircleGeometry(26, 64);
     groundGeom.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
@@ -521,27 +511,22 @@ export default function DaisyScene() {
     scene.add(ground);
     groundRef.current = ground;
 
-    // 6. Ambient Floating Petals
     const ambientPetals = new AmbientPetalSystem(35, petalTex);
     ambientPetalsRef.current = ambientPetals;
     scene.add(ambientPetals.group);
 
-    // 7. Fireflies
     const fireflies = new FireflySystem(45);
     firefliesRef.current = fireflies;
     scene.add(fireflies.group);
 
-    // 8. Rising Glowing Pollen System (For magical YouTube video aesthetic)
     const pollen = new RisingPollenSystem(140);
     pollen.setVisible(true);
     pollenRef.current = pollen;
     scene.add(pollen.group);
 
-    // Initial setup: Bouquet mode + Night + Glowing flowers (matching video)
     applyTimeOfDay('night');
     applyMode('bouquet');
 
-    // 9. Raycasting for Petal Plucking
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -611,13 +596,13 @@ export default function DaisyScene() {
             setRemainingPetals(remaining);
 
             const isLovesMe = (totalPetals - remaining) % 2 === 1;
-            const phrase = isLovesMe ? '¡Me quiere! 🌼' : 'No me quiere... 🥀';
+            const phrase = isLovesMe ? '¡Me quiere!' : 'No me quiere';
             setLastPluckedStatus(phrase);
 
             if (remaining === 0) {
               const verdict = isLovesMe
-                ? '❤️ ¡EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN! ❤️'
-                : '✨ ¡EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO! ✨';
+                ? 'EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN'
+                : 'EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO';
               setFinalVerdict(verdict);
               sound.playCelebration();
               confetti({
@@ -635,18 +620,20 @@ export default function DaisyScene() {
     const domElement = renderer.domElement;
     domElement.addEventListener('click', handlePointerDown);
 
-    // 10. Resize Listener
+    // Responsive Mobile Resize
     const handleResize = () => {
       if (!container || !renderer || !camera) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      const isP = w < h;
+
       camera.aspect = w / h;
+      camera.fov = isP ? 58 : 45;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
 
-    // 11. Render Loop
     let clock = new THREE.Clock();
     let animationFrameId: number;
 
@@ -656,7 +643,6 @@ export default function DaisyScene() {
       const delta = Math.min(clock.getDelta(), 0.1);
       const elapsedTime = clock.getElapsedTime();
 
-      // Smooth camera interpolation
       if (cameraTargetRef.current.isTransitioning) {
         camera.position.lerp(cameraTargetRef.current.pos, delta * 3.5);
         controls.target.lerp(cameraTargetRef.current.lookAt, delta * 3.5);
@@ -667,21 +653,14 @@ export default function DaisyScene() {
 
       controls.update();
 
-      // Update all flowers
       allFlowersRef.current.forEach((flower) => {
         flower.update(elapsedTime, windSpeed, delta);
       });
 
-      // Update ambient drifting petals
       ambientPetals.update(delta, windSpeed);
-
-      // Update fireflies
       fireflies.update(elapsedTime);
-
-      // Update rising golden pollen
       pollen.update(delta, elapsedTime);
 
-      // Update falling plucked petals
       const activeFalling: FallingPetal[] = [];
       const currentFalling = fallingPetalsRef.current;
 
@@ -759,27 +738,28 @@ export default function DaisyScene() {
   }, [isAutoBloom]);
 
   return (
-    <div className="relative w-full h-screen overflow-hidden select-none bg-black">
-      {/* 3D WebGL Canvas Container */}
-      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+    <div className="relative w-full h-[100dvh] overflow-hidden select-none bg-black">
+      {/* 3D WebGL Canvas Container with touch-none for smooth mobile interaction */}
+      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing touch-none" />
 
-      {/* Intro "Tocar para florecer" Overlay (Like the viral YouTube project) */}
+      {/* Intro "Tocar para florecer" Overlay */}
       {!hasStarted && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 text-center animate-in fade-in duration-500">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.6)] mb-6 animate-pulse">
-            <span className="text-4xl">🌼</span>
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-5 z-40 text-center animate-in fade-in duration-500">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.5)] mb-5 animate-pulse">
+            <Flower2 className="w-10 h-10 text-amber-950" />
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg mb-3">
-            Margaritas Brillantes 3D
+          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow mb-2.5">
+            Margaritas 3D
           </h2>
-          <p className="text-sm md:text-base text-yellow-100/90 max-w-md mb-8 font-medium leading-relaxed">
-            Una experiencia botánica y musical iluminada en la noche. Toca el botón para hacer florecer las margaritas con destellos dorados.
+          <p className="text-xs sm:text-sm text-yellow-100/90 max-w-xs sm:max-w-md mb-7 font-medium leading-relaxed">
+            Experiencia botánica interactiva con iluminación nocturna, partículas doradas y música relajante.
           </p>
           <button
             onClick={handleStartExperience}
-            className="group relative px-8 py-4 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-extrabold text-lg shadow-[0_0_35px_rgba(250,204,21,0.7)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3 cursor-pointer"
+            className="px-7 py-3.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-extrabold text-sm sm:text-base shadow-[0_0_30px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 cursor-pointer"
           >
-            <span>✨ Toca para Florecer ✨</span>
+            <Sparkles className="w-4 h-4 text-amber-950" />
+            <span>Tocar para florecer</span>
           </button>
         </div>
       )}

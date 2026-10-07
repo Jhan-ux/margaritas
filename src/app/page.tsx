@@ -7,16 +7,16 @@ import { Flower2, Loader2 } from 'lucide-react';
 const DaisyScene = dynamic(() => import('@/components/DaisyScene'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-b from-sky-400 to-sky-200 text-white">
+    <div className="w-full h-[100dvh] flex flex-col items-center justify-center bg-black text-white">
       <div className="relative flex items-center justify-center mb-4">
-        <Flower2 className="w-16 h-16 text-yellow-300 animate-spin" style={{ animationDuration: '6s' }} />
-        <Loader2 className="w-8 h-8 text-white absolute animate-spin" />
+        <Flower2 className="w-14 h-14 text-yellow-400 animate-spin" style={{ animationDuration: '8s' }} />
+        <Loader2 className="w-6 h-6 text-white absolute animate-spin" />
       </div>
-      <h2 className="text-xl font-bold tracking-tight drop-shadow-md">
-        Cultivando margaritas en 3D...
+      <h2 className="text-base sm:text-lg font-bold tracking-tight drop-shadow">
+        Cargando margaritas 3D...
       </h2>
-      <p className="text-sm text-white/80 mt-1 font-medium">
-        Generando texturas y pétalos botánicos
+      <p className="text-xs text-yellow-200/70 mt-1 font-medium">
+        Generando texturas y modelos botánicos
       </p>
     </div>
   ),
@@ -24,7 +24,7 @@ const DaisyScene = dynamic(() => import('@/components/DaisyScene'), {
 
 export default function Home() {
   return (
-    <main className="w-full h-screen overflow-hidden bg-black">
+    <main className="w-full h-[100dvh] overflow-hidden bg-black touch-none">
       <DaisyScene />
     </main>
   );
