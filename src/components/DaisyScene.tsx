@@ -728,18 +728,15 @@ export default function DaisyScene() {
           <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.5)] mb-5 animate-pulse">
             <Flower2 className="w-10 h-10 text-amber-950" />
           </div>
-          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow mb-2.5">
-            Para ti, Pastelito
+          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow mb-6">
+            Para mi Pastelito
           </h2>
-          <p className="text-xs sm:text-sm text-yellow-100/90 max-w-xs sm:max-w-md mb-7 font-medium leading-relaxed">
-            Un rincón iluminado en la noche donde cada flor florece solo para ti con música suave y destellos dorados.
-          </p>
           <button
             onClick={handleStartExperience}
             className="px-7 py-3.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-extrabold text-sm sm:text-base shadow-[0_0_30px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-950" />
-            <span>Abrir mi detalle</span>
+            <span>Abrir detalle</span>
           </button>
         </div>
       )}
