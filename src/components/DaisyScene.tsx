@@ -40,13 +40,13 @@ export default function DaisyScene() {
   const [isGlowingMode, setIsGlowingMode] = useState<boolean>(true);
   const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
 
-  // Dedication Card state (clean text with no emojis)
+  // Dedication Card state (personalized for Pastelito)
   const [isLetterOpen, setIsLetterOpen] = useState<boolean>(false);
-  const [dedicationTo, setDedicationTo] = useState<string>('Alguien Muy Especial');
+  const [dedicationTo, setDedicationTo] = useState<string>('Pastelito');
   const [dedicationMsg, setDedicationMsg] = useState<string>(
-    'Que nunca dejes de brillar con tanta luz y alegría. En cada pétalo hay un motivo para sonreír y ser feliz.'
+    'Pastelito, cada flor que florece en esta noche representa lo especial que eres para mí. Gracias por endulzar mi vida y por iluminar cada momento con tu dulzura y tu sonrisa.'
   );
-  const [dedicationFrom, setDedicationFrom] = useState<string>('Con todo mi cariño');
+  const [dedicationFrom, setDedicationFrom] = useState<string>('Con todo mi amor');
 
   // "Me quiere, no me quiere" game state
   const [remainingPetals, setRemainingPetals] = useState<number>(30);
@@ -141,8 +141,8 @@ export default function DaisyScene() {
 
     if (remaining === 0) {
       const verdict = isLovesMe
-        ? 'EL DESTINO HA HABLADO: SÍ TE QUIERE CON TODO EL CORAZÓN'
-        : 'EL DESTINO DICE QUE ERES MUY ESPECIAL Y TE QUIERE MUCHO';
+        ? 'PASTELITO, SÍ TE QUIERE CON TODO EL CORAZÓN'
+        : 'PASTELITO, ERES LO MÁS ESPECIAL Y TE QUIERE CON EL ALMA';
       setFinalVerdict(verdict);
       sound.playCelebration();
 
@@ -742,24 +742,24 @@ export default function DaisyScene() {
       {/* 3D WebGL Canvas Container with touch-none for smooth mobile interaction */}
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing touch-none" />
 
-      {/* Intro "Tocar para florecer" Overlay */}
+      {/* Intro "Para ti, Pastelito" Overlay */}
       {!hasStarted && (
         <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-5 z-40 text-center animate-in fade-in duration-500">
           <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.5)] mb-5 animate-pulse">
             <Flower2 className="w-10 h-10 text-amber-950" />
           </div>
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow mb-2.5">
-            Margaritas 3D
+            Para ti, Pastelito
           </h2>
           <p className="text-xs sm:text-sm text-yellow-100/90 max-w-xs sm:max-w-md mb-7 font-medium leading-relaxed">
-            Experiencia botánica interactiva con iluminación nocturna, partículas doradas y música relajante.
+            Un rincón iluminado en la noche donde cada flor florece solo para ti con música suave y destellos dorados.
           </p>
           <button
             onClick={handleStartExperience}
             className="px-7 py-3.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-extrabold text-sm sm:text-base shadow-[0_0_30px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-950" />
-            <span>Tocar para florecer</span>
+            <span>Abrir mi detalle</span>
           </button>
         </div>
       )}

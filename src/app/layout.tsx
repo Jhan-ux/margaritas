@@ -13,10 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Margaritas 3D | Experiencia Interactiva",
-  description: "Animación botánica 3D interactiva de margaritas con física de viento, simulación de floración, ciclo día/noche y juego de deshoje en Next.js y Three.js.",
-  keywords: ["Margaritas 3D", "Three.js", "Next.js", "Animación 3D", "WebGL", "Vercel"],
-  authors: [{ name: "Next.js 3D Flower Team" }],
+  title: "Para ti, Pastelito",
+  description: "Un detalle especial con flores que florecen solo para ti, Pastelito.",
 };
 
 export const viewport: Viewport = {

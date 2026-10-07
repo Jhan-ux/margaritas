@@ -117,18 +117,18 @@ export function UIOverlay({
     <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 sm:p-5 overflow-hidden select-none">
       {/* Top Header Bar */}
       <header className="flex items-center justify-between pointer-events-auto gap-1.5 w-full">
-        {/* Brand Badge */}
-        <div className="flex items-center gap-2 backdrop-blur-xl bg-black/55 border border-white/20 px-3 py-2 rounded-2xl shadow-xl">
+        {/* Brand Badge personalized for Pastelito */}
+        <div className="flex items-center gap-2 backdrop-blur-xl bg-black/60 border border-white/20 px-3 py-2 rounded-2xl shadow-xl">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center shadow-[0_0_12px_rgba(250,204,21,0.5)]">
-            <Flower2 className="w-4 h-4 text-amber-950" />
+            <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
           </div>
           <div className="flex flex-col">
             <h1 className="text-xs sm:text-sm font-extrabold tracking-tight text-white flex items-center gap-1">
-              Margaritas 3D
+              Para Pastelito
               {isGlowingMode && <Sparkles className="w-3.5 h-3.5 text-yellow-400 inline" />}
             </h1>
-            <span className="text-[10px] text-yellow-200/70 font-medium hidden sm:inline">
-              Simulación botánica
+            <span className="text-[10px] text-yellow-200/80 font-medium">
+              Con todo mi cariño
             </span>
           </div>
         </div>
@@ -138,11 +138,11 @@ export function UIOverlay({
           {/* Dedication Letter */}
           <button
             onClick={onToggleLetter}
-            aria-label="Dedicatoria"
+            aria-label="Tu Carta"
             className="h-9 px-2.5 sm:px-3 rounded-xl backdrop-blur-xl bg-gradient-to-r from-rose-600/80 to-amber-600/80 border border-white/30 text-white hover:brightness-110 active:scale-95 transition shadow-lg flex items-center gap-1.5 text-xs font-bold"
           >
             <Mail className="w-4 h-4" />
-            <span className="hidden md:inline">Dedicatoria</span>
+            <span className="hidden md:inline">Tu Carta</span>
           </button>
 
           {/* Glow Mode */}
@@ -209,7 +209,7 @@ export function UIOverlay({
             <div className="flex items-center gap-2">
               <Mail className="w-5 h-5 text-yellow-400" />
               <h3 className="font-extrabold text-base text-yellow-300 tracking-tight">
-                Carta de Dedicatoria
+                Carta para Pastelito
               </h3>
             </div>
             <button
